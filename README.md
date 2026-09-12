@@ -78,6 +78,30 @@ cd frontend && npm ci && npm run dev
 
 ---
 
+## Требования
+
+Для запуска одной командой нужен только **Docker с Compose v2** — ни Python, ни Node на машине
+не требуются, всё собирается внутри образа.
+
+| Что | Версия | Зачем |
+|---|---|---|
+| Docker + Compose v2 | любая актуальная | `docker compose up --build`, единственный обязательный путь |
+| Python | **3.10+** (проверено на 3.12) | только для правки бэкенда и прогона тестов |
+| Node.js | **22** | только для правки фронтенда (`nuxt dev`) |
+
+Образ собирается на `node:22-alpine` и `python:3.12-slim`, теги базовых образов зафиксированы.
+
+Зависимости бэкенда — `backend/requirements.txt`: `fastapi>=0.115`, `uvicorn[standard]>=0.30`,
+`numpy>=2.0`. Тестовые вынесены отдельно в `backend/requirements-dev.txt` (`pytest`, `websockets`,
+`httpx`), в образ не попадают. Фронтенд — Nuxt 4 с Nuxt UI v4, `globe.gl` и Tailwind 4,
+версии закреплены в `frontend/package-lock.json`.
+
+Порт по умолчанию — **8000**, переопределяется переменной `CONSTELLATION_PORT` при запуске из
+реестра. Интернет после скачивания образа не нужен: шрифты, текстуры глобуса и география лежат
+внутри.
+
+---
+
 ## Что попробовать за две минуты
 
 1. Нажмите пример **`01_full_constellation.json`** в панели слева. Сценарий уходит на сервер,
@@ -256,18 +280,37 @@ REST-ручка `/health` нужна healthcheck-у. Контракт с при�
 
 ## Где лежит проект
 
-Репозиторий собирается и проверяется одинаково на GitHub и на GitVerse: конфигурация CI
-продублирована в `.github/workflows/` и `.gitverse/workflows/` — GitVerse понимает синтаксис
-GitHub Actions и читает оба каталога. Проверяется одно и то же: сходимость расчёта с эталоном,
-73 теста и сборка образа с запуском сервиса.
+Исходный код — на GitVerse:
+**[hackrus.experts/kosmo-nizni_2nd_try_53](https://gitverse.ru/hackrus.experts/kosmo-nizni_2nd_try_53)**.
+
+Конфигурация CI продублирована в `.github/workflows/` и `.gitverse/workflows/`: GitVerse понимает
+синтаксис GitHub Actions и читает оба каталога, поэтому репозиторий собирается на обеих площадках
+без правок. Проверяется одно и то же: сходимость расчёта с эталоном, 73 теста и сборка образа
+с запуском сервиса.
 
 Готовый образ лежит в Docker Hub — [`oligovit6/constellation`](https://hub.docker.com/r/oligovit6/constellation),
 публикуется скриптом `tools/publish-image.sh`. Запуск из реестра — в разделе «Запуск» выше.
 
 ---
 
+## Поддержка и контакты
+
+Проект команды **2nd_try**.
+
+- **Документация** — каталог [`docs/`](docs/): [`PROTOCOL.md`](docs/PROTOCOL.md) (контракт `/ws`),
+  [`ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`PARAMETERS.md`](docs/PARAMETERS.md) (параметры и
+  эталонные числа), [`REPORT.md`](docs/REPORT.md) (сравнение конфигураций, анализ отказов,
+  рекомендации), [`CRITERIA.md`](docs/CRITERIA.md).
+- **Вопросы и предложения** — задача или обсуждение в репозитории; порядок работы описан в
+  [CONTRIBUTING.md](CONTRIBUTING.md).
+- **Правила поведения** — [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+- **Уязвимости** — приватно, по правилам из [SECURITY.md](SECURITY.md), а не публичной задачей.
+- **Почта** — <omazda@vk.com>.
+
+---
+
 ## Лицензия
 
-MIT — см. [LICENSE](LICENSE).
+MIT — см. [LICENSE](LICENSE). Правообладатель — команда 2nd_try.
 
 Данные Natural Earth (границы и населённые пункты) — общественное достояние.
