@@ -23,6 +23,12 @@ docker compose up --build
 фронтенд и держит единственный эндпоинт `/ws`. Образ поднимается на машине, где нет ни Python,
 ни Node — шрифты, текстуры глобуса и география лежат внутри, интернет не нужен.
 
+Если исходники не нужны, сервис поднимается готовым образом из Docker Hub одной строкой:
+
+```bash
+docker run -d -p 8000:8000 oligovit6/constellation:latest
+```
+
 <details>
 <summary>Запуск готового образа из реестра — без исходников</summary>
 
@@ -30,18 +36,26 @@ docker compose up --build
 сэмплы сценариев, шрифты и текстуры глобуса.
 
 ```bash
-docker run -d -p 8000:8000 <namespace>/constellation:latest
+docker run -d -p 8000:8000 oligovit6/constellation:latest
 ```
 
 Либо через compose, чтобы сохранённые варианты конфигурации пережили перезапуск:
 
 ```bash
-CONSTELLATION_IMAGE=<namespace>/constellation:latest \
+CONSTELLATION_IMAGE=oligovit6/constellation:latest \
   docker compose -f docker-compose.hub.yml up -d
 ```
 
-Образ собирается под `linux/amd64` и `linux/arm64` — открывается и на обычном ноутбуке,
-и на Apple Silicon. Публикация: `docker login && tools/publish-image.sh <namespace>`.
+Опубликован образ под `linux/amd64`: тег `latest` и тег по хешу коммита, из которого он собран.
+На Apple Silicon запускается через эмуляцию. Нативный `linux/arm64` собирается тем же скриптом,
+если на хосте зарегистрирован эмулятор и есть несколько ГБ свободного диска:
+
+```bash
+docker run --privileged --rm tonistiigi/binfmt --install arm64   # один раз
+docker login && tools/publish-image.sh oligovit6                 # обе архитектуры
+```
+
+Одну архитектуру публикует `CONSTELLATION_PLATFORMS=linux/amd64 tools/publish-image.sh oligovit6`.
 
 </details>
 
@@ -247,8 +261,8 @@ REST-ручка `/health` нужна healthcheck-у. Контракт с при�
 GitHub Actions и читает оба каталога. Проверяется одно и то же: сходимость расчёта с эталоном,
 73 теста и сборка образа с запуском сервиса.
 
-Готовый образ публикуется в реестр скриптом `tools/publish-image.sh`, запуск из реестра — в
-разделе «Запуск» выше.
+Готовый образ лежит в Docker Hub — [`oligovit6/constellation`](https://hub.docker.com/r/oligovit6/constellation),
+публикуется скриптом `tools/publish-image.sh`. Запуск из реестра — в разделе «Запуск» выше.
 
 ---
 
