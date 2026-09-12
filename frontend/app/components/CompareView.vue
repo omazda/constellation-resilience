@@ -3,7 +3,7 @@
  * Экран сравнения сохранённых вариантов — DoD п.3 («рекомендации, привязанные к расчётам») и
  * п.4 («экран сравнения с дельтами»). Компонент чисто презентационный, как `GlobeView.vue` и
  * `AvailabilityChart.vue`: сам не ходит в `/ws`, только показывает то, что прислал `compare`
- * (`.claude/rules/protocol.md`, обработчик `backend/app/ws.py:_handle_compare`) и просит
+ * (`docs/PROTOCOL.md`, обработчик `backend/app/ws.py:_handle_compare`) и просит
  * пересчёт событием `recompare` — какой composable дёргает `useWs().request('compare', …)` и
  * держит список сохранённых `variant_id`, решает интеграция (DoD п.1, «сохранение варианта и
  * возврат к нему» пока не имеет отдельного хранилища на фронтенде).
@@ -112,7 +112,7 @@ const props = withDefaults(defineProps<{
   result: CompareResult | null
   /** Идёт пересчёт `compare` на сервере — блокирует повторный клик и красит `UTable`/`UEmpty`. */
   loading?: boolean
-  /** `environment.target_availability` — планка «доступность ≥ X % по каждому пункту» (CLAUDE.md). */
+  /** `environment.target_availability` — планка «доступность ≥ X % по каждому пункту» (docs/PARAMETERS.md). */
   targetAvailability?: number
   /** `client_id -> ground_sites[].name` сценария, если у пунктов есть человекочитаемые имена. */
   clientLabels?: Record<string, string>
@@ -248,7 +248,7 @@ const hasHopsData = computed(() =>
 )
 
 // ──────────────────────────── Узкое место: цель — «≥ target по КАЖДОМУ пункту» ────────────────────────────
-// CLAUDE.md: «Цель — доступность ≥ 90 % времени по каждому клиенту» — то есть релевантная сводка
+// ТЗ кейса: «Цель — доступность ≥ 90 % времени по каждому клиенту» — то есть релевантная сводка
 // это МИНИМУМ по пунктам, а не среднее: одного проваленного пункта достаточно, чтобы цель не
 // считалась достигнутой, средняя доступность это бы скрыла.
 
@@ -708,7 +708,7 @@ const verdict = computed(() => {
         :description="onlyInMessage"
       />
 
-      <!-- Цель: доступность ≥ target ПО КАЖДОМУ пункту (CLAUDE.md) — сводка по узкому месту -->
+      <!-- Цель: доступность ≥ target ПО КАЖДОМУ пункту (ТЗ кейса) — сводка по узкому месту -->
       <div v-if="clientRows.length" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <UCard v-for="side in summarySides" :key="side.key" variant="subtle">
           <template #header>

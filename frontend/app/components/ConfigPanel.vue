@@ -2,7 +2,7 @@
 /**
  * Редактирование конфигурации текущего сценария: очередь запуска, RAAN/фаза плоскостей, периоды
  * недоступности аппаратов — DoD п.1. Правка не считается локально: она уходит на сервер
- * сообщением `scenario.patch` (`.claude/rules/protocol.md`, `core.scenario.patch_scenario`) —
+ * сообщением `scenario.patch` (`docs/PROTOCOL.md`, `core.scenario.patch_scenario`) —
  * сервер единственный источник истины по валидации границ, здесь только сбор дельты формы
  * и удобный UI. Ответ несёт НОВЫЙ `variant_id`: сценарии в сервисе неизменяемы, «сохранить
  * вариант» и есть «получить новый variant_id и запомнить его».
@@ -15,8 +15,7 @@
  *
  * Красный флаг, которого здесь нет: ни одного зашитого ID плоскости/аппарата/пункта — состав
  * плоскостей, список аппаратов для выбора при добавлении отказа и счётчики по очередям запуска
- * целиком читаются из загруженного сценария (см. `docs/PARAMETERS.md`, раздел «Красные флаги»
- * в CLAUDE.md).
+ * целиком читаются из загруженного сценария (см. `docs/PARAMETERS.md`).
  */
 import type { FormError, FormSubmitEvent, TableColumn } from '@nuxt/ui'
 
@@ -37,7 +36,7 @@ interface EffectiveScenario {
 }
 
 /** Форма ответа `scenario.load`/`scenario.patch` — контракт зафиксирован дословно
- *  в `.claude/rules/protocol.md`; `useScenario().summary` типизирован шире (см. её докстринг),
+ *  в `docs/PROTOCOL.md`; `useScenario().summary` типизирован шире (см. её докстринг),
  *  поэтому здесь свой узкий тип и проверка формы перед использованием (`asEffectiveScenario`). */
 interface ScenarioCommitPayload {
   variant_id: string
@@ -471,7 +470,7 @@ function downloadJson(doc: unknown, filename: string): void {
 }
 
 /** Отдельная выгрузка изменённого сценария `cosmo-A-1.0` — НЕ выгрузка результата расчёта
- *  (`cosmo-A-result-1.0`, `.claude/rules/protocol.md`, `export.kind==='scenario'`). Сервер
+ *  (`cosmo-A-result-1.0`, `docs/PROTOCOL.md`, `export.kind==='scenario'`). Сервер
  *  экспортирует только то, что уже знает по `variant_id`, поэтому несохранённый черновик перед
  *  выгрузкой сначала молча фиксируется тем же путём, что и «Сохранить вариант». */
 async function exportScenario(): Promise<void> {

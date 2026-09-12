@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * Диаграмма доступности и перерывов по каждому клиентскому пункту. Готового компонента в
- * Nuxt UI нет (.claude/rules/frontend.md) — полоса каждого пункта рисуется своим SVG на токенах
+ * Nuxt UI нет — полоса каждого пункта рисуется своим SVG на токенах
  * темы (`var(--ui-success)`/`--ui-warning`/`--ui-error`/`--ui-bg`), а не самописной разметкой
  * поверх чужой палитры.
  *
@@ -34,7 +34,7 @@ export interface AvailabilityClientSeries {
   /** Есть ли сквозной маршрут по сетке `tSeconds` — `core.metrics.compute().clients[c].ok`. */
   ok: boolean[]
   /** Точная причина отсутствия маршрута на отсчёте (`reason_codes`/`reason_labels` бинарного
-   *  пакета `compute`, `.claude/rules/protocol.md`) — «нет видимого спутника» / «разрыв ISL» /
+   *  пакета `compute`, `docs/PROTOCOL.md`) — «нет видимого спутника» / «разрыв ISL» /
    *  «нет контакта со шлюзом» / «шлюз недоступен». Необязательно: без неё подсказка показывает
    *  укрупнённую причину по `visible[i]`. Длина массива — как у `ok`. */
   reasons?: (string | null | undefined)[]
@@ -52,7 +52,7 @@ export interface AvailabilityClientSeries {
 
 interface Segment {
   startIdx: number
-  endIdx: number // не включая — как правая граница сетки в CLAUDE.md
+  endIdx: number // не включая — как правая граница сетки в docs/PARAMETERS.md
   state: AvailabilitySegmentState
   censoredStart: boolean
   censoredEnd: boolean
@@ -75,7 +75,7 @@ const emit = defineEmits<{ seek: [index: number] }>()
 
 const n = computed(() => props.tSeconds.length)
 const stepS = computed(() => (n.value > 1 ? props.tSeconds[1]! - props.tSeconds[0]! : 1))
-/** Правая граница горизонта — сетка её не включает (CLAUDE.md), но полоса должна дорисовываться
+/** Правая граница горизонта — сетка её не включает (docs/PARAMETERS.md), но полоса должна дорисовываться
  *  до неё, иначе последний отсчёт визуально теряет свою долю ширины. */
 const domainEndS = computed(() => (n.value > 0 ? props.tSeconds[n.value - 1]! + stepS.value : 0))
 
@@ -275,8 +275,8 @@ function onBandClick(event: MouseEvent): void {
 
   <div v-else class="flex flex-col gap-3">
     <!-- Скрытые общие ресурсы SVG: клип углов полосы и штриховка усечённых перерывов, один
-         набор на все строки (id глобальны на документ — .claude/rules/frontend.md про globe.gl
-         справедливо и здесь: ресурсы SVG общие). -->
+         набор на все строки (id глобальны на документ — как и у слоёв globe.gl,
+         ресурсы SVG здесь общие). -->
     <svg width="0" height="0" class="absolute" aria-hidden="true">
       <defs>
         <clipPath :id="clipId">

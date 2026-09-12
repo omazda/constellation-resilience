@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Каркас рабочего экрана: `UDashboardGroup` + `UDashboardSidebar`, собран по `.claude/rules/frontend.md`.
+ * Каркас рабочего экрана: `UDashboardGroup` + `UDashboardSidebar` из Nuxt UI.
  * Сайдбар отвечает за загрузку сценария (`UFileUpload`, ошибки — `UAlert`), основная панель —
  * за визуализацию, её собирает `pages/index.vue` в слоте `<slot />`.
  */

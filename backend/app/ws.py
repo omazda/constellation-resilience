@@ -699,7 +699,7 @@ async def _handle_analysis(payload: dict[str, Any], ctx: Ctx) -> dict[str, Any]:
         }
 
     # Тот же запрет, что и для `compute`: длинный numpy-проход в корутине заблокировал бы
-    # event loop, и соединение перестало бы отвечать (.claude/rules/protocol.md).
+    # event loop, и соединение перестало бы отвечать (docs/PROTOCOL.md).
     result = await asyncio.to_thread(work)
     _ANALYSIS_CACHE[variant_id] = result
     return result

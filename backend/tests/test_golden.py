@@ -1,10 +1,10 @@
 """Сверка расчётного ядра `core/` с эталоном на всех четырёх сценариях `Данные/*.json`.
 
 Доступность, видимость хотя бы одного спутника и максимальный перерыв — это достижимость
-в графе, а не свойство алгоритма маршрутизации (CLAUDE.md, docs/README.md вывод №1). Поэтому
+в графе, а не свойство алгоритма маршрутизации (docs/README.md вывод №1). Поэтому
 здесь эти три величины сверяются с эталоном ДВАЖДЫ, независимыми источниками:
 
-  1. со статической таблицей `GOLDEN` — числами из CLAUDE.md («Эталон: python3 tools/golden.py»)
+  1. со статической таблицей `GOLDEN` — числами из docs/PARAMETERS.md и `tools/golden.py`
      и `docs/PARAMETERS.md` (видимость 01/04). Это защита от регрессии: числа зафиксированы
      прогонами на данных и не должны тихо поплыть при рефакторинге `core/`.
   2. живым запуском независимой эталонной реализации `tools/golden.py::metrics()` (наивный BFS
@@ -51,7 +51,7 @@ def _load_golden_tool():
 
 GOLDEN_TOOL = _load_golden_tool()
 
-# Таблица эталона: CLAUDE.md, раздел «Эталон: python3 tools/golden.py», плюс видимость 01/04
+# Таблица эталона: docs/PARAMETERS.md и `tools/golden.py`, плюс видимость 01/04
 # из docs/PARAMETERS.md («Видимость хотя бы одного спутника для 01/04»).
 # {файл: {client_id: (vis_pct, avail_pct, max_gap_min)}}
 GOLDEN: dict[str, dict[str, tuple[float, float, float]]] = {
@@ -127,13 +127,13 @@ def test_matches_static_golden_table(
     m = computed[fname]["clients"][client]
     got_vis, got_avail, got_gap = _pct(m["vis_pct"]), _pct(m["avail_pct"]), _gap_min(m["max_gap_s"])
     assert got_vis == pytest.approx(exp_vis, abs=0.01), (
-        f"{fname} {client}: видимость {got_vis}% ≠ эталон CLAUDE.md {exp_vis}%"
+        f"{fname} {client}: видимость {got_vis}% ≠ эталон docs/PARAMETERS.md {exp_vis}%"
     )
     assert got_avail == pytest.approx(exp_avail, abs=0.01), (
-        f"{fname} {client}: доступность {got_avail}% ≠ эталон CLAUDE.md {exp_avail}%"
+        f"{fname} {client}: доступность {got_avail}% ≠ эталон docs/PARAMETERS.md {exp_avail}%"
     )
     assert got_gap == pytest.approx(exp_gap_min, abs=0.05), (
-        f"{fname} {client}: макс. перерыв {got_gap} мин ≠ эталон CLAUDE.md {exp_gap_min} мин"
+        f"{fname} {client}: макс. перерыв {got_gap} мин ≠ эталон docs/PARAMETERS.md {exp_gap_min} мин"
     )
 
 
@@ -169,7 +169,7 @@ def test_routing_strategy_does_not_change_reachability(
     scenarios: dict[str, dict], computed: dict[str, dict], fname: str,
 ) -> None:
     """`strategy='distance'` (Дейкстра по км) обязана дать ТЕ ЖЕ vis/avail/gap, что 'hops' —
-    это одна и та же достижимость в графе (CLAUDE.md, docs/PARAMETERS.md §5); различается
+    это одна и та же достижимость в графе (docs/PARAMETERS.md §5); различается
     только форма самого маршрута, не эти три показателя."""
     hops = computed[fname]["clients"]
     dist = metrics.compute(scenarios[fname], strategy="distance")["clients"]
@@ -284,8 +284,8 @@ def test_scenario_hash_ignores_meta_but_reacts_to_design() -> None:
 # ─────────────────────────────── 7. валидация входа: понятные ошибки ───────────────────────
 
 def test_validation_error_names_the_offending_field() -> None:
-    """Ошибка валидации называет проблемное поле, а не роняет stack trace (ТЗ, CLAUDE.md
-    «Валидация входа»). Пример: `horizon_s`, не кратный `step_s`."""
+    """Ошибка валидации называет проблемное поле, а не роняет stack trace (ТЗ,
+    docs/CRITERIA.md, критерий «Работа с данными»). Пример: `horizon_s`, не кратный `step_s`."""
     raw = json.loads((DATA_DIR / "01_full_constellation.json").read_text(encoding="utf-8"))
     broken = json.loads(json.dumps(raw))
     broken["environment"]["horizon_s"] = broken["environment"]["step_s"] * 3 + 1

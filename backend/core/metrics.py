@@ -506,7 +506,7 @@ def _check(label: str, got: float, expected: float, tol: float = 0.011) -> None:
 
 
 def _demo(path: str, golden: dict[str, dict[str, float]]) -> None:
-    """golden: {client_id: {"vis": .., "avail": .., "gap_min": ..}} — из CLAUDE.md / docs/PARAMETERS.md."""
+    """golden: {client_id: {"vis": .., "avail": .., "gap_min": ..}} — из docs/PARAMETERS.md."""
     s = scenario.load_scenario(__import__("json").loads(__import__("pathlib").Path(path).read_text(encoding="utf-8")))
     print(f"\n{path}")
     import time as _time

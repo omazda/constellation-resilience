@@ -1,13 +1,13 @@
 /**
  * Состояние текущего загруженного сценария — одно на приложение: сайдбар грузит файл или пример,
  * основная панель читает `variantId`/`summary`, дальше на него же будут опираться `snapshot` и
- * `compute` (контракт — `.claude/rules/protocol.md`). Сам запрос — `scenario.load` через
+ * `compute` (контракт — `docs/PROTOCOL.md`). Сам запрос — `scenario.load` через
  * `useWs()`; здесь только состояние и разбор файла, транспорт не дублируется.
  */
 import type { WsErrorPayload } from './useWs'
 
 /** Форма ответа `scenario.load` зафиксирована в контракте только частично — `variant_id` назван
- *  дословно в таблице `.claude/rules/protocol.md`, остальные поля («нормализованный сценарий,
+ *  дословно в таблице `docs/PROTOCOL.md`, остальные поля («нормализованный сценарий,
  *  сводка») до появления `docs/PROTOCOL.md` не типизируем строже, чтобы не выдумывать контракт. */
 export interface ScenarioLoadResult {
   variant_id: string

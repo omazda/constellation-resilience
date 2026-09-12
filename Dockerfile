@@ -1,5 +1,5 @@
 # Один образ, две стадии: node собирает статику фронтенда, python отдаёт её вместе с расчётным
-# ядром через FastAPI. Шаблон — .claude/rules/docs.md. Тесты (`pytest`) в образ не входят —
+# ядром через FastAPI. Шаблон — docs/ARCHITECTURE.md. Тесты (`pytest`) в образ не входят —
 # гоняются отдельно командой из README, чтобы не тащить pytest в продакшен-слой.
 
 # ── стадия 1: фронтенд (Nuxt 4, SPA, ssr:false) ──────────────────────────────────────────────
@@ -10,7 +10,7 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run generate
 # nuxt generate -> .output/public — статическая сборка SPA, серверный рендер не нужен
-# (frontend/nuxt.config.ts: ssr:false, .claude/rules/frontend.md).
+# (frontend/nuxt.config.ts: ssr:false).
 
 # ── стадия 2: бэкенд (FastAPI + core/numpy) + собранная статика ──────────────────────────────
 FROM python:3.12-slim AS app

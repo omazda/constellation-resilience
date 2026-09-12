@@ -12,7 +12,7 @@
 сообщение, которое в принципе не удалось разобрать как `{id, type, payload}` (не JSON, не
 объект, нет `id`): тогда `id` в ответе — `null`, разбирать больше нечего.
 
-Семь типов запросов клиент → сервер (см. `.claude/rules/protocol.md`):
+Семь типов запросов клиент → сервер (см. `docs/PROTOCOL.md`):
 
   analysis        payload = {variant_id} → резерв маршрутов, критические аппараты, кратность
                   покрытия и доставляемость с допуском по задержке (анализ устойчивости)
@@ -31,7 +31,7 @@
   snapshot        payload = {variant_id, t_s, strategy?}
                   → payload = {variant_id, t_s, satellites, isl_edges, ground_contacts, routes}
                   чисто JSON, без бинарного фрейма — это точечный запрос для отладки/деталей,
-                  а не замена бинарному пакету compute (см. .claude/rules/protocol.md).
+                  а не замена бинарному пакету compute (см. docs/PROTOCOL.md).
   compare         payload = {variant_id_a, variant_id_b, strategy?}
                   → payload = {comparable, comparable_warning, environment_diff, design_diff,
                   clients: {client_id: {a, b, delta}}, clients_only_in_a, clients_only_in_b}
@@ -111,7 +111,7 @@ __all__ = [
     "DTYPE_NAMES",
 ]
 
-#: Семь типов запросов клиент → сервер — исчерпывающий список, см. .claude/rules/protocol.md.
+#: Семь типов запросов клиент → сервер — исчерпывающий список, см. docs/PROTOCOL.md.
 REQUEST_TYPES: frozenset[str] = frozenset({
     "analysis",
     "variants.list",

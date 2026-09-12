@@ -1,5 +1,5 @@
 /**
- * Единственное WS-соединение с бэкендом на весь SPA. Контракт — `.claude/rules/protocol.md`:
+ * Единственное WS-соединение с бэкендом на весь SPA. Контракт — `docs/PROTOCOL.md`:
  * конверт `{id, type, payload}`, ответ несёт тот же `id`; ошибка — `{id, type:"error", code,
  * field, message}`. REST-ручек, кроме `/health` и раздачи сэмплов, нет — весь расчёт идёт через
  * `/ws`.
@@ -11,7 +11,7 @@
 
 export type WsStatus = 'connecting' | 'open' | 'closed'
 
-/** Известные типы запросов клиента, см. таблицу в `.claude/rules/protocol.md`. */
+/** Известные типы запросов клиента, см. таблицу в `docs/PROTOCOL.md`. */
 export type WsRequestType =
   | 'scenario.load'
   | 'scenario.patch'

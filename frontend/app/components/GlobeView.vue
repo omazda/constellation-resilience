@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /**
- * 3D-глобус спутниковой группировки на `globe.gl` (Three.js/WebGL) — .claude/rules/frontend.md.
+ * 3D-глобус спутниковой группировки на `globe.gl` (Three.js/WebGL).
  *
  * Ничего не считает: спутники, рёбра сети и маршруты приходят уже готовыми снимком `snapshot`
- * (.claude/rules/protocol.md, `{variant_id, t_s, satellites, isl_edges, ground_contacts, routes}`),
+ * (docs/PROTOCOL.md, `{variant_id, t_s, satellites, isl_edges, ground_contacts, routes}`),
  * а координаты наземных пунктов — прямо из `ground_sites` сценария. Единственное исключение —
  * радиус кольца «зона видимости»: это статическая элевационная маска (сферическая тригонометрия
  * по `altitude_km`/`min_elevation_deg`, две скалярные величины из `environment`), а не орбитальная
@@ -421,7 +421,7 @@ function describeGround(d: GlobeGroundSite): string {
 }
 
 // ────────────────────────────────── жизненный цикл globe.gl ──────────────────────────────────
-// .claude/rules/frontend.md: инстанс создаётся в onMounted по ref контейнера, в onBeforeUnmount —
+// Инстанс создаётся в onMounted по ref контейнера, в onBeforeUnmount —
 // pauseAnimation() и очистка контейнера, иначе WebGL-контексты копятся на hot-reload/повторном
 // монтировании и вкладка умирает к середине работы.
 const rootRef = ref<HTMLDivElement | null>(null)
