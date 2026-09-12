@@ -1,0 +1,44 @@
+# То же, что и .github/workflows/ci.yml — GitVerse понимает синтаксис GitHub Actions и читает
+# как .gitverse/workflows/, так и .github/workflows/. Файл продублирован намеренно: репозиторий
+# должен собираться и проверяться на обеих площадках без правок.
+#
+# Проверка того же, что проверяет жюри: сходимость расчёта с эталоном и сборка образа.
+# Эталон считается независимо от сервиса, напрямую через официальный «Расчетный модуль».
+name: Проверка
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  calculations:
+    name: Расчёты и тесты
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r backend/requirements.txt
+      - name: Сверка с эталоном по всем четырём сценариям
+        run: python3 tools/golden.py
+      - name: Тесты ядра и протокола
+        run: python3 -m pytest backend/tests -q
+
+  image:
+    name: Сборка образа
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: docker build
+        run: docker build -t constellation:ci .
+      - name: Сервис поднимается и отвечает
+        run: |
+          docker run -d --name ci -p 8000:8000 constellation:ci
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8000/health && break || sleep 2
+          done
+          curl -sf http://127.0.0.1:8000/health
+          curl -sf -o /dev/null http://127.0.0.1:8000/
+          docker rm -f ci
