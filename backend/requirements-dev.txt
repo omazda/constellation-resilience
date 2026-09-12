@@ -1,0 +1,7 @@
+# Разработка и CI: рантайм плюс тесты.
+#   pip install -r backend/requirements-dev.txt
+-r requirements.txt
+
+pytest>=8.0
+websockets>=12.0
+httpx>=0.27

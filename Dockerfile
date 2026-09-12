@@ -20,6 +20,9 @@ WORKDIR /app
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Копируется только то, что нужно рантайму. Каталоги tests/ и data/ исключены
+# в .dockerignore: тесты гоняются из исходников, а data — точка монтирования тома,
+# и её содержимое из сборочного контекста уехало бы в опубликованный образ.
 COPY backend/ ./
 # backend/core/geometry.py — побайтовая копия эталона «Расчетный модуль/geometry.py»
 # (backend/core/__init__.py); сам эталонный каталог в образ не копируется — он нужен только
@@ -32,6 +35,11 @@ COPY --from=web /web/.output/public ./static
 COPY Данные/ ./samples/
 # Сэмплы сценариев — жюри открывает их прямо из интерфейса (`UFileUpload`/список `/samples`,
 # backend/app/main.py), не разыскивая файлы в репозитории.
+
+# Точка монтирования тома с сохранёнными вариантами создаётся пустой здесь, а не копированием
+# из контекста сборки (см. .dockerignore): именованный том наследует владельца точки монтирования,
+# и без этого каталога Docker создал бы /app/data от root — appuser не смог бы туда писать.
+RUN mkdir -p /app/data
 
 # Процесс приложения не должен работать от root без необходимости.
 RUN useradd --system --create-home --uid 1000 appuser \

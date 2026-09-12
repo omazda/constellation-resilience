@@ -50,7 +50,7 @@ CONSTELLATION_IMAGE=<namespace>/constellation:latest \
 
 ```bash
 # терминал 1 — бэкенд
-pip install -r backend/requirements.txt
+pip install -r backend/requirements-dev.txt
 cd backend && uvicorn app.main:app --reload --port 8000
 
 # терминал 2 — фронтенд
