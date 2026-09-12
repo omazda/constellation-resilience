@@ -6,3 +6,11 @@ services:
     ports:
       - "8000:8000"
     restart: unless-stopped
+    # Сохранённые варианты конфигурации переживают пересборку и перезапуск контейнера:
+    # «сохранить вариант и вернуться к нему» теряет смысл, если возврат работает только
+    # до конца жизни процесса. Внутри это каталог /app/data/variants с файлами cosmo-A-1.0.
+    volumes:
+      - constellation-data:/app/data
+
+volumes:
+  constellation-data:

@@ -37,6 +37,7 @@
 | `export` | `{variant_id, kind?: "result"\|"scenario", strategy?}` (по умолчанию `"result"`) | сам экспортируемый документ **без обёртки** — либо `cosmo-A-result-1.0`, либо `cosmo-A-1.0` |
 | `attach` | `{variant_id, strategy?}` | тот же формат, что у `compute` (манифест + бинарный фрейм), **без пересчёта** |
 | `analysis` | `{variant_id}` | `{reserve, critical_satellites, coverage, delivery}` — анализ устойчивости, считается отдельным проходом и кешируется по варианту |
+| `variants.list` | `{}` | `{variants: [{variant_id, title, source, created, summary}]}` — сохранённые на диске конфигурации; переживают перезапуск сервиса |
 
 Сценарии в сервисе неизменяемы: `scenario.load`/`scenario.patch` не правят существующий вариант, а
 создают новый и возвращают его `variant_id`. `variant_id == scenario_hash` — SHA-256 от

@@ -25,9 +25,13 @@
 from __future__ import annotations
 
 import asyncio
+import datetime as _dt
+import json
 import logging
+import os
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Awaitable, Callable
 
 import numpy as np
@@ -78,8 +82,61 @@ class _Store:
 
     def __init__(self) -> None:
         self.variants: dict[str, dict[str, Any]] = {}
+        self.meta: dict[str, dict[str, Any]] = {}
         self.results: dict[tuple[str, str], ComputeResult] = {}
         self.pending: dict[tuple[str, str], asyncio.Future] = {}
+        self._load_from_disk()
+
+    # ── хранение на диске ───────────────────────────────────────────────────────────────
+    # Варианты переживают перезапуск сервиса: «сохранить вариант и вернуться к нему» теряет
+    # смысл, если возврат работает только до конца жизни процесса. Формат — тот же
+    # cosmo-A-1.0, что и на входе, поэтому файл варианта можно просто открыть или отдать
+    # обратно в сервис. Кеш расчёта на диск НЕ кладём: он выводится из сценария за секунду,
+    # а весит сотни килобайт.
+
+    @property
+    def dir(self) -> Path:
+        d = Path(os.environ.get("CONSTELLATION_DATA_DIR", Path(__file__).resolve().parent.parent / "data")) / "variants"
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+
+    def _load_from_disk(self) -> None:
+        try:
+            files = sorted(self.dir.glob("*.json"))
+        except OSError:
+            return
+        for f in files:
+            try:
+                doc = json.loads(f.read_text(encoding="utf-8"))
+                s = scenario_mod.load_scenario(doc["scenario"])
+            except Exception:
+                # Битый или устаревший файл не должен мешать запуску сервиса.
+                continue
+            variant_id = f.stem
+            self.variants[variant_id] = s
+            self.meta[variant_id] = doc.get("meta", {})
+
+    def save(self, variant_id: str, s: dict[str, Any], meta: dict[str, Any]) -> None:
+        self.variants[variant_id] = s
+        self.meta[variant_id] = meta
+        try:
+            (self.dir / f"{variant_id}.json").write_text(
+                json.dumps({"meta": meta, "scenario": scenario_mod.export_scenario(s)},
+                           ensure_ascii=False, separators=(",", ":")),
+                encoding="utf-8",
+            )
+        except OSError:
+            # Диск недоступен (read-only контейнер) — работаем как раньше, из памяти.
+            pass
+
+    def listing(self) -> list[dict[str, Any]]:
+        return sorted(
+            (
+                {"variant_id": vid, **self.meta.get(vid, {}), "summary": _summary(s)}
+                for vid, s in self.variants.items()
+            ),
+            key=lambda r: (r.get("created") or ""),
+        )
 
 
 _STORE = _Store()
@@ -421,7 +478,11 @@ async def _handle_scenario_load(payload: dict[str, Any], ctx: Ctx) -> dict[str, 
     # payload — сырой JSON сценария целиком (не обёрнут в {"scenario": ...}), см. protocol.py.
     s = scenario_mod.load_scenario(payload)
     variant_id = scenario_mod.scenario_hash(s)
-    _STORE.variants[variant_id] = s
+    _STORE.save(variant_id, s, {
+        "title": str(s.get("meta", {}).get("title") or "Загруженный сценарий"),
+        "source": "load",
+        "created": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
+    })
     return {
         "variant_id": variant_id,
         "scenario_hash": variant_id,
@@ -435,7 +496,12 @@ async def _handle_scenario_patch(payload: dict[str, Any], ctx: Ctx) -> dict[str,
     patch = {k: v for k, v in payload.items() if k != "variant_id"}
     patched = scenario_mod.patch_scenario(base, patch)
     variant_id = scenario_mod.scenario_hash(patched)
-    _STORE.variants[variant_id] = patched
+    _STORE.save(variant_id, patched, {
+        "title": str(patched.get("meta", {}).get("title") or "Правка конфигурации"),
+        "source": "patch",
+        "parent_variant_id": parent_id,
+        "created": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
+    })
     return {
         "variant_id": variant_id,
         "scenario_hash": variant_id,
@@ -639,6 +705,16 @@ async def _handle_analysis(payload: dict[str, Any], ctx: Ctx) -> dict[str, Any]:
     return result
 
 
+async def _handle_variants_list(payload: dict[str, Any], ctx: Ctx) -> dict[str, Any]:
+    """Список сохранённых вариантов.
+
+    Нужен интерфейсу, чтобы сравнение предлагало выбор из уже загруженных конфигураций, а не
+    только из тех, что появились в текущей вкладке браузера. Варианты лежат на диске и переживают
+    перезапуск сервиса, поэтому список одинаков для всех подключений.
+    """
+    return {"variants": _STORE.listing()}
+
+
 async def _handle_export(payload: dict[str, Any], ctx: Ctx) -> dict[str, Any]:
     variant_id, s = _require_variant(payload)
     kind = payload.get("kind", "result")
@@ -669,6 +745,7 @@ _HANDLERS: dict[str, Callable[[dict[str, Any], Ctx], Awaitable[dict[str, Any] | 
     "export": _handle_export,
     "attach": _handle_attach,
     "analysis": _handle_analysis,
+    "variants.list": _handle_variants_list,
 }
 
 

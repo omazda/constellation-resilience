@@ -99,26 +99,52 @@ const frame = computed(() => result.value?.frameAt(previewIndex.value) ?? null)
 const trails = computed(() => result.value?.trailAt(previewIndex.value, 8) ?? [])
 
 // ─────────────────────────────── сравнение вариантов ───────────────────────────────
-const savedVariants = ref<CompareVariantOption[]>([])
+/**
+ * Варианты берутся СПИСКОМ С СЕРВЕРА, а не копятся во вкладке браузера: они лежат на диске и
+ * переживают перезапуск сервиса, поэтому сравнение предлагает выбор из всех уже загруженных
+ * конфигураций, включая те, что делали в прошлый раз.
+ */
+interface StoredVariant {
+  variant_id: string
+  title?: string
+  source?: string
+  created?: string
+  summary?: { launch_stage?: number, n_satellites?: number }
+}
+
+const storedVariants = ref<StoredVariant[]>([])
 const variantIdA = ref<string | null>(null)
 const variantIdB = ref<string | null>(null)
 const compareResult = ref<unknown>(null)
 const compareLoading = ref(false)
 
-function rememberVariant(variantId: string, label: string): void {
-  if (savedVariants.value.some(v => v.variantId === variantId)) return
-  savedVariants.value = [...savedVariants.value, { variantId, label }]
-  if (!variantIdA.value) variantIdA.value = variantId
-  else if (!variantIdB.value) variantIdB.value = variantId
+const savedVariants = computed<CompareVariantOption[]>(() => storedVariants.value.map(v => ({
+  variantId: v.variant_id,
+  label: `${v.title ?? 'Вариант'} · очередь ${v.summary?.launch_stage ?? '?'} · ${v.variant_id.slice(0, 8)}`
+})))
+
+async function refreshVariants(): Promise<void> {
+  try {
+    const r = await request<{ variants: StoredVariant[] }>('variants.list')
+    storedVariants.value = r.variants ?? []
+    // Пара для сравнения подставляется сама: два последних варианта — самый частый случай.
+    const ids = storedVariants.value.map(v => v.variant_id)
+    if (!variantIdA.value || !ids.includes(variantIdA.value)) variantIdA.value = ids.at(-2) ?? ids.at(-1) ?? null
+    if (!variantIdB.value || !ids.includes(variantIdB.value)) variantIdB.value = ids.at(-1) ?? null
+  } catch { /* тост уже показан */ }
 }
 
-watch(loadedVariantId, (id) => {
-  if (id) rememberVariant(id, `Исходный · ${id.slice(0, 8)}`)
-})
+onMounted(() => { void refreshVariants() })
+watch(loadedVariantId, () => { void refreshVariants() })
 
 function onVariantChanged(payload: { variantId: string, summary: Record<string, unknown> }): void {
-  rememberVariant(payload.variantId, `Вариант · ${payload.variantId.slice(0, 8)}`)
   activeVariantId.value = payload.variantId
+  void refreshVariants()
+}
+
+/** Переключиться на сохранённый вариант — возврат к нему требует ТЗ (п. 1 функциональных). */
+function openVariant(variantId: string): void {
+  activeVariantId.value = variantId
 }
 
 async function runCompare(): Promise<void> {
@@ -219,7 +245,8 @@ function exportDocument(kind: 'result' | 'scenario'): void {
   -->
   <div class="h-full w-full min-w-0 flex flex-col overflow-hidden">
     <div class="shrink-0 flex flex-wrap items-center gap-2 px-3 py-2 border-b border-default bg-default">
-      <UDashboardSidebarCollapse />
+      <UDashboardSidebarToggle class="lg:hidden" />
+      <UDashboardSidebarCollapse class="hidden lg:inline-flex" />
 
       <UBadge
         v-if="computing"
@@ -228,13 +255,17 @@ function exportDocument(kind: 'result' | 'scenario'): void {
         variant="subtle"
         icon="i-lucide-loader-circle"
       />
-      <UBadge
-        v-else-if="activeVariantId"
-        :label="`вариант ${activeVariantId.slice(0, 8)}`"
-        color="primary"
-        variant="subtle"
+      <USelectMenu
+        v-else-if="savedVariants.length"
+        :model-value="activeVariantId ?? undefined"
+        :items="savedVariants"
+        value-key="variantId"
+        label-key="label"
         icon="i-lucide-git-branch"
-        class="font-mono"
+        size="xs"
+        class="w-56 sm:w-72"
+        placeholder="Сохранённые варианты"
+        @update:model-value="openVariant($event as string)"
       />
       <UBadge v-else label="Сценарий не загружен" color="neutral" variant="subtle" icon="i-lucide-upload" />
 
@@ -250,22 +281,30 @@ function exportDocument(kind: 'result' | 'scenario'): void {
           class="w-44"
           :disabled="computing"
         />
-        <UButton
-          label="Результат"
-          icon="i-lucide-download"
-          color="neutral"
-          variant="subtle"
-          size="xs"
-          @click="exportDocument('result')"
-        />
-        <UButton
-          label="Сценарий"
-          icon="i-lucide-file-json"
-          color="neutral"
-          variant="subtle"
-          size="xs"
-          @click="exportDocument('scenario')"
-        />
+        <UTooltip text="Выгрузить результат расчёта">
+          <UButton
+            icon="i-lucide-download"
+            color="neutral"
+            variant="subtle"
+            size="xs"
+            aria-label="Выгрузить результат расчёта"
+            @click="exportDocument('result')"
+          >
+            <span class="hidden sm:inline">Результат</span>
+          </UButton>
+        </UTooltip>
+        <UTooltip text="Выгрузить изменённый сценарий">
+          <UButton
+            icon="i-lucide-file-json"
+            color="neutral"
+            variant="subtle"
+            size="xs"
+            aria-label="Выгрузить изменённый сценарий"
+            @click="exportDocument('scenario')"
+          >
+            <span class="hidden sm:inline">Сценарий</span>
+          </UButton>
+        </UTooltip>
       </template>
     </div>
 
@@ -319,7 +358,12 @@ function exportDocument(kind: 'result' | 'scenario'): void {
           <UTabs
             :items="tabs"
             class="h-full w-full min-w-0"
-            :ui="{ root: 'min-w-0', list: 'min-w-0 overflow-x-auto', content: 'h-full min-w-0 overflow-auto' }"
+            :ui="{
+              root: 'min-w-0',
+              list: 'min-w-0 overflow-x-auto',
+              trigger: 'shrink-0',
+              content: 'h-full min-w-0 overflow-auto'
+            }"
           >
             <template #timeline>
               <div class="h-full min-w-0 p-4 space-y-4">

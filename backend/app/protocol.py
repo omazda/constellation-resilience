@@ -49,7 +49,7 @@
 Ошибка — `{"id":, "type": "error", "code":, "field":, "message":}`. Коды:
 
   bad_envelope     — само сообщение не разобрать как {id, type, payload}
-  unknown_type     — type не входит в восемь известных запросов
+  unknown_type     — type не входит в девять известных запросов
   bad_request      — payload известного типа, но с неверной формой (нет ключа, не то значение)
   validation_error — сценарий/патч не прошёл проверку core.scenario (ScenarioError)
   not_found        — variant_id (или один из variant_id_a/variant_id_b) не существует
@@ -114,6 +114,7 @@ __all__ = [
 #: Семь типов запросов клиент → сервер — исчерпывающий список, см. .claude/rules/protocol.md.
 REQUEST_TYPES: frozenset[str] = frozenset({
     "analysis",
+    "variants.list",
     "scenario.load",
     "scenario.patch",
     "compute",
