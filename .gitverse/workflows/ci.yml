@@ -1,8 +1,19 @@
-# То же, что и .github/workflows/ci.yml — GitVerse понимает синтаксис GitHub Actions и читает
-# как .gitverse/workflows/, так и .github/workflows/. Файл продублирован намеренно: репозиторий
-# должен собираться и проверяться на обеих площадках без правок.
+# Проверка на GitVerse. GitVerse понимает синтаксис GitHub Actions и читает как
+# .gitverse/workflows/, так и .github/workflows/, поэтому конфигурации двух площадок
+# держатся рядом.
 #
-# Проверка того же, что проверяет жюри: сходимость расчёта с эталоном и сборка образа.
+# Отличие от .github/workflows/ci.yml ровно одно и вынужденное: на облачных раннерах
+# GitVerse **нет доступа к docker.sock** (документация, «Облачные раннеры»: «Доступ к
+# docker.sock — Отсутствует (временно)»), джоб выполняется внутри контейнера
+# gitverse/runner-image. `docker build` там падает с
+#   failed to connect to the docker API at unix:///var/run/docker.sock
+# и починить это в workflow нельзя — нужен self-hosted раннер либо Kaniko.
+#
+# Поэтому здесь проверяется то же по существу, но без docker: фронтенд действительно
+# собирается, бэкенд поднимается и отдаёт собранную статику вместе с /health. Ровно это
+# и делает образ, только стадии выполняются нативно. Сборка самого образа проверяется
+# на GitHub, где docker на раннере есть.
+#
 # Эталон считается независимо от сервиса, напрямую через официальный «Расчетный модуль».
 name: Проверка
 
@@ -27,19 +38,43 @@ jobs:
       - name: Тесты ядра и протокола
         run: python3 -m pytest backend/tests -q
 
-  image:
-    name: Сборка образа
+  assembly:
+    name: Сборка фронтенда и раздача статики
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: docker build
-        run: docker build -t constellation:ci .
-      - name: Сервис поднимается и отвечает
+
+      # Те же версии, что в стадиях Dockerfile: node:22-alpine и python:3.12-slim.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Сборка фронтенда (nuxt generate)
+        working-directory: frontend
         run: |
-          docker run -d --name ci -p 8000:8000 constellation:ci
+          npm ci
+          npm run generate
+
+      - name: Статика на месте, где её ищет бэкенд
+        run: |
+          # main.py берёт статику из backend/static (STATIC_DIR = BACKEND_DIR / "static"),
+          # в образе туда же кладётся .output/public из стадии node.
+          cp -r frontend/.output/public backend/static
+          test -f backend/static/index.html
+          test -f backend/static/200.html   # SPA-fallback, без него клиентские маршруты 404
+
+      - name: Сервис поднимается и отдаёт фронтенд
+        working-directory: backend
+        run: |
+          pip install -r requirements.txt
+          python3 -m uvicorn app.main:app --host 127.0.0.1 --port 8000 &
           for i in $(seq 1 60); do
-            curl -sf http://127.0.0.1:8000/health && break || sleep 2
+            curl -sf http://127.0.0.1:8000/health > /dev/null && break || sleep 2
           done
           curl -sf http://127.0.0.1:8000/health
           curl -sf -o /dev/null http://127.0.0.1:8000/
-          docker rm -f ci
+          # Неизвестный путь должен отдавать SPA-fallback, а не 404.
+          curl -sf -o /dev/null http://127.0.0.1:8000/compare
