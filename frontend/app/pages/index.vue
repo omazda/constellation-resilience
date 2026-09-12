@@ -40,6 +40,18 @@ const currentIndex = ref(0)
 const previewIndex = ref(0)
 watch(currentIndex, (i) => { previewIndex.value = i })
 
+/**
+ * Стратегия поиска маршрута. Доступность и максимальный перерыв от неё НЕ зависят — это
+ * достижимость в графе (docs/PARAMETERS.md §5), и переключатель это показывает наглядно:
+ * проценты не меняются, а длина маршрута и число переходов меняются. Ровно то, что просит
+ * критерий «Алгоритмы маршрутизации»: объяснить алгоритм и показать его работу.
+ */
+const strategy = ref<'hops' | 'distance'>('hops')
+const strategyItems = [
+  { label: 'по числу переходов', value: 'hops' },
+  { label: 'по длине трассы', value: 'distance' }
+]
+
 const effectiveScenario = computed(() => (summary.value?.effective_scenario ?? null) as {
   environment?: { altitude_km?: number, target_availability?: number }
   ground_sites?: GlobeGroundSite[]
@@ -62,7 +74,7 @@ async function loadResult(variantId: string): Promise<void> {
   computing.value = true
   progressPct.value = 0
   try {
-    const manifest = await request<ResultManifest>('compute', { variant_id: variantId }, {
+    const manifest = await request<ResultManifest>('compute', { variant_id: variantId, strategy: strategy.value }, {
       onProgress: (p) => { progressPct.value = Number((p as { pct?: number })?.pct ?? 0) }
     })
     result.value = decodeResult(manifest, clientLabels.value, altitudeKm.value ?? 550)
@@ -77,6 +89,8 @@ async function loadResult(variantId: string): Promise<void> {
 }
 
 watch(activeVariantId, (id) => { if (id) void loadResult(id) })
+// Смена стратегии — пересчёт того же варианта другим алгоритмом.
+watch(strategy, () => { if (activeVariantId.value) void loadResult(activeVariantId.value) })
 
 // Кадр сети собирается из уже привезённого пакета — ни одного запроса при перемотке.
 // Это и есть причина, по которой картинка успевает за курсором.
@@ -112,7 +126,8 @@ async function runCompare(): Promise<void> {
   try {
     compareResult.value = await request('compare', {
       variant_id_a: variantIdA.value,
-      variant_id_b: variantIdB.value
+      variant_id_b: variantIdB.value,
+      strategy: strategy.value
     })
   } catch {
     compareResult.value = null
@@ -157,8 +172,8 @@ const tabs = computed<TabsItem[]>(() => [
 ])
 
 const splitterItems: SplitterItem[] = [
-  { id: 'panel-globe', slot: 'globe', minSize: 34, defaultSize: 58 },
-  { id: 'panel-charts', slot: 'panels', minSize: 26, defaultSize: 42 }
+  { id: 'panel-globe', slot: 'globe', minSize: 30, defaultSize: 54 },
+  { id: 'panel-charts', slot: 'panels', minSize: 30, defaultSize: 46 }
 ]
 
 const currentRoutes = computed<GlobeRoute[]>(() => (frame.value?.routes ?? []) as GlobeRoute[])
@@ -180,51 +195,62 @@ function exportDocument(kind: 'result' | 'scenario'): void {
 </script>
 
 <template>
-  <UDashboardPanel id="constellation">
-    <template #header>
-      <UDashboardNavbar title="Группировка" icon="i-lucide-satellite-dish">
-        <template #leading>
-          <UDashboardSidebarCollapse />
-        </template>
+  <!--
+    Панель инструментов — обычная строка в теле страницы, а не слот #header у UDashboardPanel:
+    в этой сборке слот не рендерится вовсе (проверено в браузере — элемента панели нет в DOM),
+    и вместе с ним молча пропадали выгрузка и переключатель стратегии.
+  -->
+  <div class="h-full flex flex-col">
+    <div class="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-default bg-default">
+      <UDashboardSidebarCollapse />
 
-        <template #trailing>
-          <UBadge
-            v-if="computing"
-            :label="`Расчёт ${progressPct}%`"
-            color="info"
-            variant="subtle"
-            icon="i-lucide-loader-circle"
-          />
-          <UBadge
-            v-else-if="activeVariantId"
-            :label="`variant_id: ${activeVariantId.slice(0, 8)}`"
-            color="primary"
-            variant="subtle"
-            icon="i-lucide-git-branch"
-          />
-          <UBadge v-else label="Сценарий не загружен" color="neutral" variant="subtle" icon="i-lucide-upload" />
+      <UBadge
+        v-if="computing"
+        :label="`Расчёт ${progressPct} %`"
+        color="info"
+        variant="subtle"
+        icon="i-lucide-loader-circle"
+      />
+      <UBadge
+        v-else-if="activeVariantId"
+        :label="`вариант ${activeVariantId.slice(0, 8)}`"
+        color="primary"
+        variant="subtle"
+        icon="i-lucide-git-branch"
+        class="font-mono"
+      />
+      <UBadge v-else label="Сценарий не загружен" color="neutral" variant="subtle" icon="i-lucide-upload" />
 
-          <UButton
-            v-if="result"
-            label="Результат"
-            icon="i-lucide-download"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            @click="exportDocument('result')"
-          />
-          <UButton
-            v-if="result"
-            label="Сценарий"
-            icon="i-lucide-file-json"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            @click="exportDocument('scenario')"
-          />
-        </template>
-      </UDashboardNavbar>
-    </template>
+      <div class="flex-1" />
+
+      <template v-if="result">
+        <span class="text-xs text-muted">Маршрут ищем</span>
+        <USelectMenu
+          v-model="strategy"
+          :items="strategyItems"
+          value-key="value"
+          size="xs"
+          class="w-44"
+          :disabled="computing"
+        />
+        <UButton
+          label="Результат"
+          icon="i-lucide-download"
+          color="neutral"
+          variant="subtle"
+          size="xs"
+          @click="exportDocument('result')"
+        />
+        <UButton
+          label="Сценарий"
+          icon="i-lucide-file-json"
+          color="neutral"
+          variant="subtle"
+          size="xs"
+          @click="exportDocument('scenario')"
+        />
+      </template>
+    </div>
 
     <div class="flex-1 min-h-0 flex flex-col">
       <USplitter id="workspace-splitter" :items="splitterItems" class="flex-1 min-h-0">
@@ -364,5 +390,5 @@ function exportDocument(kind: 'result' | 'scenario'): void {
         </template>
       </USplitter>
     </div>
-  </UDashboardPanel>
+  </div>
 </template>

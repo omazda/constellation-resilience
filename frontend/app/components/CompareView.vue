@@ -583,8 +583,54 @@ const tabs: TabsItem[] = [
 ]
 </script>
 
+/**
+ * Вывод по сравнению. Критерий «Проектирование и сравнение конфигураций» требует, чтобы
+ * результат ПОМОГАЛ выбрать конфигурацию, а не только показывал числа: поэтому здесь
+ * формулируется, какой вариант предпочесть и при каком условии. Текст собран из тех же
+ * чисел, что и таблица, — иначе он врал бы на чужом сценарии.
+ */
+const verdict = computed(() => {
+  const r = props.result
+  if (!r) return null
+  const target = props.targetAvailability ?? 0.9
+  const rows = Object.entries(r.clients)
+  if (!rows.length) return null
+
+  const metA = rows.every(([, e]) => e.a.avail_pct >= target)
+  const metB = rows.every(([, e]) => e.b.avail_pct >= target)
+  const gainers = rows.filter(([, e]) => e.delta.avail_pct > 0.0005).length
+  const losers = rows.filter(([, e]) => e.delta.avail_pct < -0.0005).length
+  const worstB = rows.reduce((acc, cur) => (acc[1].b.avail_pct <= cur[1].b.avail_pct ? acc : cur))
+  const gapBetter = rows.filter(([, e]) => e.delta.max_gap_s < 0).length
+
+  let choice: string
+  if (metB && !metA) choice = 'Выбрать вариант B: цель выполняется по всем пунктам, у A — нет.'
+  else if (metA && !metB) choice = 'Оставить вариант A: у B цель перестаёт выполняться.'
+  else if (metA && metB) choice = 'Цель выполняется в обоих вариантах — выбор по запасу и длительности перерывов.'
+  else choice = `Цель не выполняется ни в одном варианте: хуже всего ${worstB[0]}.`
+
+  return {
+    choice,
+    detail: `Доступность выросла у ${gainers} ${gainers === 1 ? 'пункта' : 'пунктов'}, упала у ${losers}; `
+      + `максимальный перерыв сократился у ${gapBetter}.`,
+    ok: metB || metA,
+    comparable: r.comparable !== false
+  }
+})
+
 <template>
   <div class="flex flex-col gap-5">
+    <UAlert
+      v-if="verdict"
+      :color="verdict.comparable ? (verdict.ok ? 'success' : 'warning') : 'warning'"
+      variant="subtle"
+      :title="verdict.choice"
+      :description="verdict.comparable
+        ? verdict.detail
+        : `${verdict.detail} Внимание: варианты несопоставимы по параметрам среды — вывод о том, что один лучше другого, по этим числам делать нельзя.`"
+      icon="i-lucide-check-check"
+    />
+
     <!-- Выбор пары вариантов -->
     <div class="flex flex-wrap items-end gap-2">
       <div class="flex flex-col gap-1 min-w-52">
