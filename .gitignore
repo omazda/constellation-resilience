@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Nuxt / Node
+node_modules/
+.nuxt/
+.output/
+.data/
+
+# graphify: граф пересобирается командой, в репозиторий не кладём.
+# Исключение — экспорт для документации, он копируется в docs/graph.svg
+graphify-out/
+
+# Офлайн-документация Nuxt UI (2,2 МБ), нужна только агенту локально
+nuxt-ui/
+
+# Прочее
+.DS_Store
+*.log

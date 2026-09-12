@@ -1,0 +1,18 @@
+# Наложение для боевого стенда на braining.space.
+#
+# Отличия от базового compose: контейнер слушает только петлю, снаружи его публикует nginx
+# (/etc/nginx/sites-available/constellation.conf) — он же терминирует TLS и проксирует /ws.
+# Порт 8100 выбран свободным: 8000 и 8080 заняты другими стендами этой машины.
+#
+# Запуск:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+services:
+  app:
+    # Имя образа закреплено намеренно. Без него compose собирает образ по имени проекта
+    # (`hakaton-app`) и при `up` БЕЗ `--build` молча поднимает ранее собранный образ с тем же
+    # именем — то есть выкатывает старую сборку, ничего не сообщая. Явный тег делает
+    # несоответствие видимым: что собрано, то и запущено.
+    image: constellation:latest
+    container_name: constellation
+    ports: !override
+      - "127.0.0.1:8100:8000"

@@ -1,0 +1,8 @@
+# Запуск сервиса одной командой: `docker compose up --build`, затем http://localhost:8000
+# (README.md, раздел «Запуск»).
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    restart: unless-stopped

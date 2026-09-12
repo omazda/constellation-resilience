@@ -1,0 +1,146 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+/* ============================================================================================
+ * Тема «ультрафиолет»: приборная консоль инженера-проектировщика, а не игровой интерфейс.
+ *
+ * Три правила, которым подчинено всё остальное:
+ *   1. Свечение — это данные. Светится только то, что сообщает о живом состоянии: установленное
+ *      соединение, действующий маршрут, текущий отсчёт. Декоративного свечения нет.
+ *   2. Один акцент за пределами фиолетового. Мятный `ion` занят ровно одним смыслом — «контакт
+ *      есть», и на фиолетовом глобусе он остаётся различим, чего не сделал бы второй оттенок
+ *      фиолетового.
+ *   3. Числа — приборные. Моноширинные и с табличными цифрами там, где их сравнивают глазом
+ *      по колонкам: проценты доступности, время, число переходов.
+ *
+ * Нейтральная шкала намеренно не серая, а графит с фиолетовым подмесом: на нейтральном сером
+ * ультрафиолет читается как случайно выбранный акцент, на общей подложке — как одна система.
+ * ============================================================================================ */
+
+@theme static {
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* Ультрафиолет — основная шкала: от почти чёрного фиолета до бледной сирени. */
+  --color-uv-50: #f4eeff;
+  --color-uv-100: #e7dbff;
+  --color-uv-200: #d0b9ff;
+  --color-uv-300: #b692ff;
+  --color-uv-400: #9b6bff;
+  --color-uv-500: #8b5cf6;
+  --color-uv-600: #7338e8;
+  --color-uv-700: #5a24c0;
+  --color-uv-800: #3f1a87;
+  --color-uv-900: #271052;
+  --color-uv-950: #150a2e;
+
+  /* Ion — «контакт есть». Единственный неполовый цвет в палитре. */
+  --color-ion-50: #e6fff9;
+  --color-ion-100: #c2fff0;
+  --color-ion-200: #8afde2;
+  --color-ion-300: #52f5d2;
+  --color-ion-400: #38f0d0;
+  --color-ion-500: #14d6b5;
+  --color-ion-600: #0bac92;
+  --color-ion-700: #0a866f;
+  --color-ion-800: #0b6a58;
+  --color-ion-900: #0b5247;
+  --color-ion-950: #032f29;
+
+  /* Графит: нейтраль с фиолетовым подмесом — подложка всей консоли. */
+  --color-graphite-50: #f6f4fa;
+  --color-graphite-100: #ebe7f2;
+  --color-graphite-200: #d7d0e4;
+  --color-graphite-300: #b3a9c8;
+  --color-graphite-400: #8a7fa3;
+  --color-graphite-500: #665c7d;
+  --color-graphite-600: #4b4260;
+  --color-graphite-700: #362e47;
+  --color-graphite-800: #221b33;
+  --color-graphite-900: #150f24;
+  --color-graphite-950: #0b0416;
+}
+
+/* Тёмная тема — основная. Поверхности разведены по глубине: панели консоли лежат НАД самой
+   тёмной подложкой, иначе композиция читается плоским чёрным пятном, а «дорого» — это прежде
+   всего внятная иерархия поверхностей, а не яркость акцента. Глобус рисуется на собственном
+   чёрном канвасе и оказывается самым глубоким слоем. */
+.dark {
+  --ui-bg: var(--color-graphite-900);
+  --ui-bg-muted: var(--color-graphite-950);
+  --ui-bg-elevated: var(--color-graphite-800);
+  --ui-bg-accented: var(--color-graphite-700);
+
+  /* Границы фиолетовые, а не серые: это и есть «хайтек» — структура светится слабо и всюду,
+     вместо того чтобы кричать в одном месте.
+     Подмешиваем к подложке, а НЕ к `transparent`: `--ui-border-accented` берёт GlobeView как
+     цвет межспутниковых линий и растеризует через canvas, а полупрозрачный цвет там даёт
+     премультиплицированное значение — связи ушли бы в черноту. */
+  --ui-border: color-mix(in srgb, var(--color-uv-500) 22%, var(--color-graphite-950));
+  --ui-border-muted: color-mix(in srgb, var(--color-uv-500) 13%, var(--color-graphite-950));
+  --ui-border-accented: color-mix(in srgb, var(--color-uv-400) 46%, var(--color-graphite-900));
+}
+
+/*
+ * UDashboardGroup рендерится как `fixed inset-0` (см. тему компонента в Nuxt UI) — ему нужен
+ * предок высотой во весь экран, иначе панели схлопнутся до 0. html/body сами по себе такой
+ * высоты не имеют без явного правила.
+ */
+html,
+body,
+#__nuxt {
+  height: 100%;
+}
+
+body {
+  overscroll-behavior: none;
+  background: var(--ui-bg);
+}
+
+/* Приборные числа: сравниваются по колонкам, поэтому табличные и не прыгают при перемотке. */
+.tabular,
+.font-mono {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "zero" 1;
+}
+
+/* Свечение как признак живого состояния — не украшение. Применяется точечно. */
+.live {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-ion-400) 35%, transparent),
+    0 0 18px -6px color-mix(in srgb, var(--color-ion-400) 70%, transparent);
+}
+
+.uv-edge {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-uv-300) 10%, transparent),
+    0 0 24px -12px color-mix(in srgb, var(--color-uv-400) 60%, transparent);
+}
+
+/* Фокус виден всегда: консолью пользуются с клавиатуры, и это же требование доступности. */
+:focus-visible {
+  outline: 2px solid var(--color-uv-400);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-uv-500) 45%, transparent);
+  color: var(--color-uv-50);
+}
+
+/* Полосы прокрутки не должны выпадать серым прямоугольником из тёмной консоли. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-uv-500) 40%, transparent) transparent;
+}
+
+/* Кому важно — уважаем: анимация маршрута и вращение глобуса отключаются системной настройкой. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
