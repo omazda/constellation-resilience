@@ -1,6 +1,6 @@
 # Запуск ГОТОВОГО образа из реестра — без исходников и без сборки.
 #
-#   CONSTELLATION_IMAGE=<логин>/constellation:latest \
+#   CONSTELLATION_IMAGE=oligovit6/constellation:latest \
 #     docker compose -f docker-compose.hub.yml up -d
 #
 # Нужно ровно два: установленный docker и этот файл. Собранный фронтенд, расчётное ядро,
@@ -8,7 +8,7 @@
 # скачивания не требуется.
 services:
   app:
-    image: ${CONSTELLATION_IMAGE:?укажите образ, например omazda/constellation:latest}
+    image: ${CONSTELLATION_IMAGE:?укажите образ, например oligovit6/constellation:latest}
     ports:
       - "${CONSTELLATION_PORT:-8000}:8000"
     restart: unless-stopped
