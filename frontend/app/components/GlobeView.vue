@@ -367,6 +367,9 @@ async function loadGeography(): Promise<void> {
 const isCity = (d: LabelDatum): d is CityDatum => (d as CityDatum).kind === 'city'
 /** Подпись только у крупнейших: 395 названий на шаре превращаются в кашу и перекрывают сеть. */
 const CITY_LABEL_FROM = 5_000_000
+/** Города с подписями — отдельный DOM-слой globe.gl (`htmlElementsData`): обычные элементы
+ *  страницы, поэтому кириллица, шрифт и цвет темы работают как везде. */
+const namedCities = computed(() => cities.value.filter(c => c.pop >= CITY_LABEL_FROM))
 
 const mergedLabels = computed<LabelDatum[]>(() => [
   ...cities.value,
@@ -432,6 +435,7 @@ function refreshLayers(): void {
   globe.arcsData(mergedArcs.value as unknown as object[])
   globe.labelsData(mergedLabels.value as unknown as object[])
   globe.polygonsData(countries.value)
+  globe.htmlElementsData(namedCities.value as unknown as object[])
   globe.ringsData(footprintRings.value as unknown as object[])
   globe.pathsData(props.trails as unknown as object[])
 }
@@ -498,11 +502,10 @@ onMounted(() => {
     // наземные пункты и шлюз
     .labelLat('lat_deg')
     .labelLng('lon_deg')
-    .labelText((d) => {
-      const l = d as LabelDatum
-      if (isCity(l)) return l.pop >= CITY_LABEL_FROM ? l.name : ''
-      return groundLabelText(l)
-    })
+    // Города здесь только точкой, без текста: подписи globe.gl рисуются геометрией по
+    // латинскому typeface (three-globe), и кириллица в них превращается в «?». Названия
+    // городов выводятся DOM-слоем ниже — там работает обычный шрифт страницы.
+    .labelText((d) => (isCity(d as LabelDatum) ? '' : groundLabelText(d as LabelDatum)))
     .labelColor((d) => labelColorFor(d as LabelDatum))
     .labelDotRadius((d) => labelDotRadiusFor(d as LabelDatum))
     .labelIncludeDot(true)
@@ -532,6 +535,28 @@ onMounted(() => {
       return n ? `<div style="font-size:12px">${escapeHtml(n)}</div>` : ''
     })
     .polygonsTransitionDuration(0)
+    // Названия крупнейших городов обычными DOM-элементами — единственный способ показать
+    // кириллицу на глобусе.
+    .htmlLat('lat_deg')
+    .htmlLng('lon_deg')
+    .htmlAltitude(0.012)
+    .htmlElement((d) => {
+      const c = d as CityDatum
+      const el = document.createElement('div')
+      el.textContent = c.name
+      el.title = `${c.name} — ${(c.pop / 1e6).toFixed(1)} млн`
+      el.style.cssText = [
+        'font-size:10px',
+        'line-height:1',
+        'white-space:nowrap',
+        'pointer-events:none',
+        'transform:translate(6px, -50%)',
+        'text-shadow:0 0 4px rgba(0,0,0,.9)',
+        `color:${withAlpha(palette.value.inactive, 0.9)}`
+      ].join(';')
+      return el
+    })
+    .htmlTransitionDuration(0)
     // Следы: градиент от прозрачного к цвету аппарата — хвост тает, голова яркая.
     .pathPoints((d) => (d as { points: [number, number, number][] }).points)
     .pathPointLat((pt) => (pt as [number, number, number])[0])

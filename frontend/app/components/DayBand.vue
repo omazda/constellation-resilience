@@ -164,15 +164,18 @@ watch([() => props.clients, () => props.selectedClientId, pinned, hoverIndex], (
 </script>
 
 <template>
-  <div class="flex items-stretch gap-3">
+  <div class="flex items-stretch gap-2 sm:gap-3 w-full min-w-0">
     <div class="shrink-0 flex flex-col justify-end pb-1" :style="{ paddingTop: `${TOP}px` }">
       <div
         v-for="c in clients"
         :key="c.clientId"
-        class="text-[11px] text-muted leading-none flex items-center justify-end pr-1"
+        class="text-[10px] sm:text-[11px] text-muted leading-none flex items-center justify-end pr-1"
         :style="{ height: `${ROW}px`, marginBottom: `${GAP}px` }"
       >
-        {{ c.label ?? c.clientId }}
+        <!-- На узком экране длинное имя пункта обрезалось слева и превращалось в обрывок
+             («hern terminal 65»). Короткий идентификатор точнее и всегда влезает целиком. -->
+        <span class="sm:hidden font-mono">{{ c.clientId }}</span>
+        <span class="hidden sm:inline">{{ c.label ?? c.clientId }}</span>
       </div>
     </div>
 

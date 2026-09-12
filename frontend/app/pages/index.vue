@@ -14,6 +14,7 @@ import type { SplitterItem, TabsItem } from '@nuxt/ui'
 import type { GlobeGroundContact, GlobeGroundSite, GlobeIslEdge, GlobeRoute, GlobeSatellite } from '../components/GlobeView.vue'
 import type { CompareVariantOption } from '../components/CompareView.vue'
 import type { AnalysisPayload } from '../components/ResilienceView.vue'
+import { useMediaQuery } from '@vueuse/core'
 import { decodeResult, type DecodedResult, type ResultManifest } from '../composables/useResult'
 
 const { request } = useWs()
@@ -171,10 +172,26 @@ const tabs = computed<TabsItem[]>(() => [
   { label: 'Сравнение', slot: 'compare' }
 ])
 
-const splitterItems: SplitterItem[] = [
-  { id: 'panel-globe', slot: 'globe', minSize: 30, defaultSize: 54 },
-  { id: 'panel-charts', slot: 'panels', minSize: 30, defaultSize: 46 }
-]
+/**
+ * На узком экране горизонтальный сплиттер не имеет смысла: глобусу и панели остаётся по
+ * трети экрана, и не читается ни то, ни другое. Ниже 1024 px раскладка складывается в столбец —
+ * глобус сверху фиксированной высотой, полоса суток под ним, вкладки прокручиваются следом.
+ */
+const isWide = useMediaQuery('(min-width: 1024px)')
+
+const splitterItems = computed<SplitterItem[]>(() => (
+  isWide.value
+    ? [
+        { id: 'panel-globe', slot: 'globe', minSize: 30, defaultSize: 54 },
+        { id: 'panel-charts', slot: 'panels', minSize: 30, defaultSize: 46 }
+      ]
+    // В столбце глобусу нужна бо́льшая доля: сжатый по высоте шар не читается вовсе,
+    // а вкладки прокручиваются.
+    : [
+        { id: 'panel-globe', slot: 'globe', minSize: 35, defaultSize: 62 },
+        { id: 'panel-charts', slot: 'panels', minSize: 25, defaultSize: 38 }
+      ]
+))
 
 const currentRoutes = computed<GlobeRoute[]>(() => (frame.value?.routes ?? []) as GlobeRoute[])
 
@@ -200,8 +217,8 @@ function exportDocument(kind: 'result' | 'scenario'): void {
     в этой сборке слот не рендерится вовсе (проверено в браузере — элемента панели нет в DOM),
     и вместе с ним молча пропадали выгрузка и переключатель стратегии.
   -->
-  <div class="h-full flex flex-col">
-    <div class="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-default bg-default">
+  <div class="h-full w-full min-w-0 flex flex-col overflow-hidden">
+    <div class="shrink-0 flex flex-wrap items-center gap-2 px-3 py-2 border-b border-default bg-default">
       <UDashboardSidebarCollapse />
 
       <UBadge
@@ -221,10 +238,10 @@ function exportDocument(kind: 'result' | 'scenario'): void {
       />
       <UBadge v-else label="Сценарий не загружен" color="neutral" variant="subtle" icon="i-lucide-upload" />
 
-      <div class="flex-1" />
+      <div class="flex-1 min-w-0" />
 
       <template v-if="result">
-        <span class="text-xs text-muted">Маршрут ищем</span>
+        <span class="text-xs text-muted hidden sm:inline">Маршрут ищем</span>
         <USelectMenu
           v-model="strategy"
           :items="strategyItems"
@@ -253,7 +270,12 @@ function exportDocument(kind: 'result' | 'scenario'): void {
     </div>
 
     <div class="flex-1 min-h-0 flex flex-col">
-      <USplitter id="workspace-splitter" :items="splitterItems" class="flex-1 min-h-0">
+      <USplitter
+        id="workspace-splitter"
+        :items="splitterItems"
+        :orientation="isWide ? 'horizontal' : 'vertical'"
+        class="flex-1 min-h-0 w-full min-w-0"
+      >
         <template #globe>
           <div class="h-full w-full min-w-0 flex flex-col">
             <div class="flex-1 min-h-0 relative">
@@ -294,9 +316,13 @@ function exportDocument(kind: 'result' | 'scenario'): void {
         </template>
 
         <template #panels>
-          <UTabs :items="tabs" class="h-full w-full min-w-0" :ui="{ content: 'h-full overflow-y-auto' }">
+          <UTabs
+            :items="tabs"
+            class="h-full w-full min-w-0"
+            :ui="{ root: 'min-w-0', list: 'min-w-0 overflow-x-auto', content: 'h-full min-w-0 overflow-auto' }"
+          >
             <template #timeline>
-              <div class="h-full p-4 space-y-4">
+              <div class="h-full min-w-0 p-4 space-y-4">
                 <template v-if="result">
                   <TimelineBar v-model="currentIndex" :steps="result.steps" />
 
@@ -336,7 +362,7 @@ function exportDocument(kind: 'result' | 'scenario'): void {
             </template>
 
             <template #availability>
-              <div class="h-full p-4">
+              <div class="h-full min-w-0 p-4">
                 <AvailabilityChart
                   v-if="result"
                   :t-seconds="result.steps"
@@ -367,13 +393,13 @@ function exportDocument(kind: 'result' | 'scenario'): void {
             </template>
 
             <template #config>
-              <div class="h-full p-4">
+              <div class="h-full min-w-0 p-4">
                 <ConfigPanel @variant-changed="onVariantChanged" />
               </div>
             </template>
 
             <template #compare>
-              <div class="h-full p-4">
+              <div class="h-full min-w-0 p-4">
                 <CompareView
                   v-model:variant-id-a="variantIdA"
                   v-model:variant-id-b="variantIdB"
