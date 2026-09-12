@@ -1,0 +1,13 @@
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.woff2 binary
+*.pdf binary
+
+# Подсветка языков на GitHub: документация и данные не должны определять «язык проекта»,
+# а офлайн-копия доков Nuxt UI не должна попадать в статистику вовсе.
+docs/** linguist-documentation
+Данные/** linguist-data
+frontend/public/geo/** linguist-generated
+nuxt-ui/** linguist-vendored
